@@ -1,5 +1,7 @@
 # Telegram Bot API — Prebuilt Binaries
 
+[![Telegram Bot API](https://img.shields.io/badge/Telegram%20Bot%20API-10.3-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://core.telegram.org/bots/api)
+
 Unofficial prebuilt binaries of the **Telegram Bot API server**, compiled from the official upstream source code.
 
 This repository exists to make it easier to run the Telegram Bot API server without having to compile it yourself.
