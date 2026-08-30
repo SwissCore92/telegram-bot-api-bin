@@ -120,11 +120,11 @@ jobs:
             telegram-bot-api/install/bin/telegram-bot-api \
             "dist/${NAME}/"
 
-          if [[ -f telegram-bot-api/LICENSE_1_0.txt ]]; then
-            cp \
-              telegram-bot-api/LICENSE_1_0.txt \
-              "dist/${NAME}/"
-          fi
+          test -f LICENSE_1_0.txt
+
+          cp \
+            LICENSE_1_0.txt \
+            "dist/${NAME}/"
 
           cp \
             telegram-bot-api/source-commit.txt \
@@ -215,11 +215,11 @@ jobs:
             telegram-bot-api/install/bin/telegram-bot-api \
             "dist/${NAME}/"
 
-          if [[ -f telegram-bot-api/LICENSE_1_0.txt ]]; then
-            cp \
-              telegram-bot-api/LICENSE_1_0.txt \
-              "dist/${NAME}/"
-          fi
+          test -f LICENSE_1_0.txt
+
+          cp \
+            LICENSE_1_0.txt \
+            "dist/${NAME}/"
 
           cp \
             telegram-bot-api/source-commit.txt \
@@ -336,11 +336,13 @@ jobs:
             "telegram-bot-api/install/bin/telegram-bot-api.exe" `
             "dist/$NAME/"
 
-          if (Test-Path "telegram-bot-api/LICENSE_1_0.txt") {
-            Copy-Item `
-              "telegram-bot-api/LICENSE_1_0.txt" `
-              "dist/$NAME/"
+          if (-not (Test-Path "LICENSE_1_0.txt")) {
+              throw "LICENSE_1_0.txt is missing from the repository."
           }
+
+          Copy-Item `
+              "LICENSE_1_0.txt" `
+              "dist/$NAME/"
 
           Copy-Item `
             "telegram-bot-api/source-commit.txt" `
@@ -438,11 +440,11 @@ jobs:
             telegram-bot-api/install/bin/telegram-bot-api \
             "dist/${NAME}/"
 
-          if [[ -f telegram-bot-api/LICENSE_1_0.txt ]]; then
-            cp \
-              telegram-bot-api/LICENSE_1_0.txt \
-              "dist/${NAME}/"
-          fi
+          test -f LICENSE_1_0.txt
+
+          cp \
+            LICENSE_1_0.txt \
+            "dist/${NAME}/"
 
           cp \
             telegram-bot-api/source-commit.txt \
@@ -530,11 +532,11 @@ jobs:
             telegram-bot-api/install/bin/telegram-bot-api \
             "dist/${NAME}/"
 
-          if [[ -f telegram-bot-api/LICENSE_1_0.txt ]]; then
-            cp \
-              telegram-bot-api/LICENSE_1_0.txt \
-              "dist/${NAME}/"
-          fi
+          test -f LICENSE_1_0.txt
+
+          cp \
+            LICENSE_1_0.txt \
+            "dist/${NAME}/"
 
           cp \
             telegram-bot-api/source-commit.txt \
