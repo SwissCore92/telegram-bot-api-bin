@@ -1,24 +1,16 @@
 name: Build Telegram Bot API
 
 on:
-  push:
-    tags:
-      - "v*"
+push:
+tags:
+- "v*"
 
-  workflow_dispatch:
-    inputs:
-      upstream_ref:
-        description: "Telegram Bot API upstream ref (tag, branch, or commit)"
-        required: true
-        default: "master"
-
-```
-  publish_release:
-    description: "Publish a GitHub Release"
-    required: true
-    type: boolean
-    default: false
-```
+workflow_dispatch:
+inputs:
+upstream_ref:
+description: "Telegram Bot API upstream ref (tag, branch, or commit)"
+required: true
+default: "master"
 
 permissions:
 contents: write
@@ -27,13 +19,6 @@ env:
 UPSTREAM_REPO: https://github.com/tdlib/telegram-bot-api.git
 
 jobs:
-
-# ============================================================
-
-# Resolve upstream source and version
-
-# ============================================================
-
 resolve:
 name: Resolve upstream source
 runs-on: ubuntu-latest
@@ -45,7 +30,7 @@ outputs:
   version: ${{ steps.version.outputs.version }}
 
 steps:
-  - name: Determine upstream ref
+  - name: Determine upstream source
     id: source
     shell: bash
     run: |
@@ -57,7 +42,7 @@ steps:
         UPSTREAM_REF="master"
       fi
 
-      echo "Resolving upstream ref: $UPSTREAM_REF"
+      echo "Upstream ref: $UPSTREAM_REF"
 
       git clone --recursive \
         "$UPSTREAM_REPO" \
@@ -82,14 +67,13 @@ steps:
         exit 1
       fi
 
-      echo "Upstream ref:     $UPSTREAM_REF"
       echo "Upstream commit:  $UPSTREAM_COMMIT"
       echo "Upstream version: $UPSTREAM_VERSION"
 
       echo "upstream_commit=$UPSTREAM_COMMIT" >> "$GITHUB_OUTPUT"
       echo "upstream_version=$UPSTREAM_VERSION" >> "$GITHUB_OUTPUT"
 
-  - name: Determine and validate release version
+  - name: Determine release version
     id: version
     shell: bash
     run: |
@@ -98,6 +82,9 @@ steps:
       if [[ "${{ github.event_name }}" == "push" ]]; then
         RELEASE_VERSION="${GITHUB_REF_NAME#v}"
 
+        echo "GitHub tag version: $RELEASE_VERSION"
+        echo "Upstream version:   ${{ steps.source.outputs.upstream_version }}"
+
         if [[ "$RELEASE_VERSION" != "${{ steps.source.outputs.upstream_version }}" ]]; then
           echo "ERROR: Version mismatch."
           echo "GitHub tag:       $RELEASE_VERSION"
@@ -105,14 +92,12 @@ steps:
           exit 1
         fi
 
-        echo "Version check passed:"
-        echo "  GitHub tag:       $RELEASE_VERSION"
-        echo "  Upstream version: ${{ steps.source.outputs.upstream_version }}"
+        echo "Version verification passed."
 
         echo "version=v${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
       else
-        echo "Manual build:"
-        echo "  Upstream version: ${{ steps.source.outputs.upstream_version }}"
+        echo "Manual build."
+        echo "Using upstream version: ${{ steps.source.outputs.upstream_version }}"
 
         echo "version=v${{ steps.source.outputs.upstream_version }}" >> "$GITHUB_OUTPUT"
       fi
@@ -656,8 +641,6 @@ release:
 name: Publish GitHub Release
 
 ```
-if: github.event_name == 'push' || inputs.publish_release == true
-
 needs:
   - resolve
   - linux-amd64
@@ -665,6 +648,8 @@ needs:
   - windows-amd64
   - macos-amd64
   - macos-arm64
+
+if: github.event_name == 'push'
 
 runs-on: ubuntu-latest
 
