@@ -268,15 +268,18 @@ jobs:
       - name: Install vcpkg
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg.git
+          git clone https://github.com/microsoft/vcpkg.git `
+            "$env:GITHUB_WORKSPACE\vcpkg"
 
-          .\vcpkg\bootstrap-vcpkg.bat
+          Set-Location "$env:GITHUB_WORKSPACE\vcpkg"
+
+          .\bootstrap-vcpkg.bat
 
       - name: Install dependencies
         shell: pwsh
         working-directory: telegram-bot-api
         run: |
-          .\vcpkg\vcpkg.exe install `
+          & "$env:GITHUB_WORKSPACE\vcpkg\vcpkg.exe" install `
             gperf:x64-windows `
             openssl:x64-windows `
             zlib:x64-windows
@@ -285,7 +288,9 @@ jobs:
         shell: pwsh
         working-directory: telegram-bot-api
         run: |
-          git rev-parse HEAD | Out-File source-commit.txt -Encoding ascii
+          git rev-parse HEAD |
+            Out-File source-commit.txt -Encoding ascii
+
           Get-Content source-commit.txt
 
       - name: Configure
@@ -296,7 +301,7 @@ jobs:
             -S . `
             -B build `
             -A x64 `
-            -DCMAKE_TOOLCHAIN_FILE="$PWD/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DCMAKE_INSTALL_PREFIX="$PWD/install"
 
       - name: Build
@@ -341,7 +346,6 @@ jobs:
             "telegram-bot-api/source-commit.txt" `
             "dist/$NAME/"
 
-          # Include DLLs installed by the build.
           Get-ChildItem `
             "telegram-bot-api/install/bin/*.dll" `
             -ErrorAction SilentlyContinue |
@@ -367,7 +371,6 @@ jobs:
         with:
           name: windows-amd64
           path: dist/
-
   # ============================================================
   # macOS Intel
   # ============================================================
