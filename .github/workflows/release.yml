@@ -181,10 +181,11 @@ jobs:
             -C dist \
             -czf "dist/${NAME}.tar.gz" \
             "${NAME}"
-
-          sha256sum \
-            "dist/${NAME}.tar.gz" \
-            > "dist/${NAME}.tar.gz.sha256"
+          
+          (
+            cd dist
+            sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
+          )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -272,9 +273,10 @@ jobs:
             -czf "dist/${NAME}.tar.gz" \
             "${NAME}"
 
-          sha256sum \
-            "dist/${NAME}.tar.gz" \
-            > "dist/${NAME}.tar.gz.sha256"
+          (
+            cd dist
+            sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
+          )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -490,9 +492,10 @@ jobs:
             -czf "dist/${NAME}.tar.gz" \
             "${NAME}"
 
-          shasum -a 256 \
-            "dist/${NAME}.tar.gz" \
-            > "dist/${NAME}.tar.gz.sha256"
+          (
+            cd dist
+            shasum -a 256 "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
+          )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -577,9 +580,10 @@ jobs:
             -czf "dist/${NAME}.tar.gz" \
             "${NAME}"
 
-          shasum -a 256 \
-            "dist/${NAME}.tar.gz" \
-            > "dist/${NAME}.tar.gz.sha256"
+          (
+            cd dist
+            shasum -a 256 "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256"
+          )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
