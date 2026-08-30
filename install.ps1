@@ -24,11 +24,9 @@ switch ($env:PROCESSOR_ARCHITECTURE) {
 $Platform = "windows-amd64"
 }
 
-```
 default {
     Fail "Unsupported Windows architecture: $env:PROCESSOR_ARCHITECTURE"
 }
-```
 
 }
 
@@ -43,7 +41,7 @@ New-Item `    -ItemType Directory`
 
 try {
 
-```
+
 # --------------------------------------------------------
 # Get latest release
 # --------------------------------------------------------
@@ -130,7 +128,7 @@ $ActualHash = (
 
 if ($ExpectedHash.ToLower() -ne $ActualHash.ToLower()) {
     Fail @"
-```
+
 
 SHA-256 checksum verification failed.
 
@@ -142,7 +140,7 @@ $ActualHash
 "@
 }
 
-```
+
 Info "Checksum verified."
 
 # --------------------------------------------------------
@@ -241,7 +239,7 @@ Write-Host "Open a new PowerShell window, then run:"
 Write-Host ""
 Write-Host "  telegram-bot-api.exe --help"
 Write-Host ""
-```
+
 
 }
 finally {

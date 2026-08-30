@@ -37,7 +37,6 @@ die "Unsupported Linux architecture: $ARCH"
 esac
 ;;
 
-```
 Darwin)
     case "$ARCH" in
         x86_64|amd64)
@@ -55,7 +54,6 @@ Darwin)
 *)
     die "Unsupported operating system: $OS"
     ;;
-```
 
 esac
 
