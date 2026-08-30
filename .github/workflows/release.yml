@@ -1,16 +1,16 @@
 name: Build Telegram Bot API
 
 on:
-push:
-tags:
-- "v*"
+  push:
+    tags:
+      - "v*"
 
-workflow_dispatch:
-inputs:
-upstream_ref:
-description: "Telegram Bot API upstream ref (tag, branch, or commit)"
-required: true
-default: "master"
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "Telegram Bot API upstream ref (tag, branch, or commit)"
+        required: true
+        default: "master"
 
 ```
   publish_release:
