@@ -1,4 +1,3 @@
-```yaml
 name: Build Telegram Bot API
 
 on:
@@ -673,4 +672,4 @@ jobs:
             release/*.zip
             release/*.sha256
             release/SHA256SUMS.txt
-```
+
