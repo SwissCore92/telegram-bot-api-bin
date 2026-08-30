@@ -23,32 +23,83 @@ jobs:
     name: Resolve upstream source
     runs-on: ubuntu-latest
 
+    ```
     outputs:
-      upstream_ref: ${{ steps.ref.outputs.upstream_ref }}
+      upstream_ref: ${{ steps.source.outputs.upstream_ref }}
+      upstream_commit: ${{ steps.source.outputs.upstream_commit }}
+      upstream_version: ${{ steps.source.outputs.upstream_version }}
       version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Determine upstream ref
-        id: ref
+        id: source
         shell: bash
         run: |
+          set -euo pipefail
+
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "upstream_ref=${{ inputs.upstream_ref }}" >> "$GITHUB_OUTPUT"
+            UPSTREAM_REF="${{ inputs.upstream_ref }}"
           else
-            # For tagged releases, use master unless you replace this
-            # with a specific Telegram commit/tag.
-            echo "upstream_ref=master" >> "$GITHUB_OUTPUT"
+            UPSTREAM_REF="master"
           fi
 
-      - name: Determine release version
+          echo "upstream_ref=${UPSTREAM_REF}" >> "$GITHUB_OUTPUT"
+
+          git clone --recursive \
+            "$UPSTREAM_REPO" \
+            telegram-bot-api
+
+          cd telegram-bot-api
+
+          git checkout "$UPSTREAM_REF"
+          git submodule update --init --recursive
+
+          UPSTREAM_COMMIT="$(git rev-parse HEAD)"
+
+          UPSTREAM_VERSION="$(
+            sed -nE \
+              's/^project\(TelegramBotApi VERSION ([0-9]+\.[0-9]+).*/\1/p' \
+              CMakeLists.txt |
+              head -n 1
+          )"
+
+          if [[ -z "$UPSTREAM_VERSION" ]]; then
+            echo "ERROR: Could not determine Telegram Bot API version from CMakeLists.txt."
+            exit 1
+          fi
+
+          echo "Upstream ref:    $UPSTREAM_REF"
+          echo "Upstream commit: $UPSTREAM_COMMIT"
+          echo "Upstream version: $UPSTREAM_VERSION"
+
+          echo "upstream_commit=${UPSTREAM_COMMIT}" >> "$GITHUB_OUTPUT"
+          echo "upstream_version=${UPSTREAM_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Determine and validate release version
         id: version
         shell: bash
         run: |
+          set -euo pipefail
+
           if [[ "${{ github.event_name }}" == "push" ]]; then
-            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+
+            if [[ "$RELEASE_VERSION" != "${{ steps.source.outputs.upstream_version }}" ]]; then
+              echo "ERROR: Version mismatch."
+              echo "GitHub tag:       $RELEASE_VERSION"
+              echo "Upstream version: ${{ steps.source.outputs.upstream_version }}"
+              exit 1
+            fi
+
+            echo "Version check passed:"
+            echo "  GitHub tag:       $RELEASE_VERSION"
+            echo "  Upstream version: ${{ steps.source.outputs.upstream_version }}"
+
+            echo "version=v${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
           else
-            echo "version=manual-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+            echo "version=v${{ steps.source.outputs.upstream_version }}" >> "$GITHUB_OUTPUT"
           fi
+    ```
 
   # ============================================================
   # Linux AMD64
@@ -82,7 +133,7 @@ jobs:
             telegram-bot-api
 
           cd telegram-bot-api
-          git checkout "${{ needs.resolve.outputs.upstream_ref }}"
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
           git submodule update --init --recursive
 
       - name: Record source revision
@@ -177,7 +228,7 @@ jobs:
             telegram-bot-api
 
           cd telegram-bot-api
-          git checkout "${{ needs.resolve.outputs.upstream_ref }}"
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
           git submodule update --init --recursive
 
       - name: Record source revision
@@ -262,7 +313,7 @@ jobs:
 
           Set-Location telegram-bot-api
 
-          git checkout "${{ needs.resolve.outputs.upstream_ref }}"
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
           git submodule update --init --recursive
 
       - name: Install vcpkg
@@ -402,7 +453,7 @@ jobs:
             telegram-bot-api
 
           cd telegram-bot-api
-          git checkout "${{ needs.resolve.outputs.upstream_ref }}"
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
           git submodule update --init --recursive
 
       - name: Record source revision
@@ -494,7 +545,7 @@ jobs:
             telegram-bot-api
 
           cd telegram-bot-api
-          git checkout "${{ needs.resolve.outputs.upstream_ref }}"
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
           git submodule update --init --recursive
 
       - name: Record source revision
@@ -616,13 +667,34 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.resolve.outputs.version }}
-          name: Telegram Bot API ${{ needs.resolve.outputs.version }}
-          generate_release_notes: true
-          prerelease: false
-          files: |
-            release/*.tar.gz
-            release/*.zip
-            release/*.sha256
-            release/SHA256SUMS.txt
+        ```
+    with:
+      tag_name: ${{ needs.resolve.outputs.version }}
+      name: Telegram Bot API ${{ needs.resolve.outputs.version }}
+      body: |
+        ## Telegram Bot API ${{ needs.resolve.outputs.upstream_version }}
+
+        Prebuilt Telegram Bot API server binaries for:
+
+        - Linux AMD64
+        - Linux ARM64
+        - Windows AMD64
+        - macOS Intel
+        - macOS Apple Silicon
+
+        ### Upstream source
+
+        Repository: https://github.com/tdlib/telegram-bot-api
+        Commit: `${{ needs.resolve.outputs.upstream_commit }}`
+
+        The binaries were built from this exact upstream commit.
+
+        The release archives include the upstream Boost Software License 1.0.
+      generate_release_notes: true
+      prerelease: false
+      files: |
+        release/*.tar.gz
+        release/*.zip
+        release/*.sha256
+        release/SHA256SUMS.txt
+```
