@@ -23,7 +23,7 @@ resolve:
 name: Resolve upstream source
 runs-on: ubuntu-latest
 
-```
+
 outputs:
   upstream_commit: ${{ steps.source.outputs.upstream_commit }}
   upstream_version: ${{ steps.source.outputs.upstream_version }}
@@ -101,7 +101,7 @@ steps:
 
         echo "version=v${{ steps.source.outputs.upstream_version }}" >> "$GITHUB_OUTPUT"
       fi
-```
+
 
 # ============================================================
 
@@ -114,7 +114,7 @@ name: Linux AMD64
 needs: resolve
 runs-on: ubuntu-24.04
 
-```
+
 steps:
   - name: Checkout
     uses: actions/checkout@v4
@@ -200,7 +200,7 @@ steps:
     with:
       name: linux-amd64
       path: dist/
-```
+
 
 # ============================================================
 
@@ -213,7 +213,7 @@ name: Linux ARM64
 needs: resolve
 runs-on: ubuntu-24.04-arm
 
-```
+
 steps:
   - name: Checkout
     uses: actions/checkout@v4
@@ -299,7 +299,7 @@ steps:
     with:
       name: linux-arm64
       path: dist/
-```
+
 
 # ============================================================
 
@@ -312,7 +312,7 @@ name: Windows AMD64
 needs: resolve
 runs-on: windows-2025
 
-```
+
 steps:
   - name: Checkout
     uses: actions/checkout@v4
@@ -437,7 +437,7 @@ steps:
     with:
       name: windows-amd64
       path: dist/
-```
+
 
 # ============================================================
 
@@ -450,7 +450,7 @@ name: macOS Intel
 needs: resolve
 runs-on: macos-15-intel
 
-```
+
 steps:
   - name: Checkout
     uses: actions/checkout@v4
@@ -533,7 +533,7 @@ steps:
     with:
       name: macos-amd64
       path: dist/
-```
+
 
 # ============================================================
 
@@ -546,7 +546,7 @@ name: macOS Apple Silicon
 needs: resolve
 runs-on: macos-15
 
-```
+
 steps:
   - name: Checkout
     uses: actions/checkout@v4
@@ -629,7 +629,7 @@ steps:
     with:
       name: macos-arm64
       path: dist/
-```
+
 
 # ============================================================
 
@@ -640,7 +640,7 @@ steps:
 release:
 name: Publish GitHub Release
 
-```
+
 needs:
   - resolve
   - linux-amd64
@@ -725,4 +725,4 @@ steps:
         release/*.zip
         release/*.sha256
         release/SHA256SUMS.txt
-```
+
