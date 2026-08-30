@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $Repo = "SwissCore92/telegram-bot-api-binaries"
 $BinaryName = "telegram-bot-api.exe"
+
 $InstallDir = Join-Path $env:LOCALAPPDATA "Telegram Bot API"
 
 function Info($Message) {
@@ -11,6 +12,57 @@ Write-Host "==> $Message"
 function Fail($Message) {
 Write-Error $Message
 exit 1
+}
+
+function Show-Help {
+Write-Host @"
+Usage: install.ps1 [--install-dir PATH]
+
+Options:
+--install-dir PATH   Install the binary into PATH.
+Default: $InstallDir
+--help, -h           Show this help message.
+"@
+}
+
+# ------------------------------------------------------------
+
+# Parse arguments
+
+# ------------------------------------------------------------
+
+for ($i = 0; $i -lt $args.Count; $i++) {
+switch ($args[$i]) {
+"--install-dir" {
+if ($i + 1 -ge $args.Count) {
+Fail "--install-dir requires a path."
+}
+
+```
+        $i++
+        $InstallDir = $args[$i]
+
+        if ([string]::IsNullOrWhiteSpace($InstallDir)) {
+            Fail "--install-dir requires a non-empty path."
+        }
+    }
+
+    "--help" {
+        Show-Help
+        exit 0
+    }
+
+    "-h" {
+        Show-Help
+        exit 0
+    }
+
+    default {
+        Fail "Unknown option: $($args[$i]). Use --help for usage information."
+    }
+}
+```
+
 }
 
 # ------------------------------------------------------------
@@ -24,9 +76,11 @@ switch ($env:PROCESSOR_ARCHITECTURE) {
 $Platform = "windows-amd64"
 }
 
+```
 default {
     Fail "Unsupported Windows architecture: $env:PROCESSOR_ARCHITECTURE"
 }
+```
 
 }
 
@@ -41,7 +95,7 @@ New-Item `    -ItemType Directory`
 
 try {
 
-
+```
 # --------------------------------------------------------
 # Get latest release
 # --------------------------------------------------------
@@ -110,9 +164,15 @@ Info "Verifying SHA-256 checksum..."
 $ExpectedHash = $null
 
 foreach ($Line in Get-Content $ChecksumPath) {
-    if ($Line -match "^\s*([a-fA-F0-9]{64})\s+\*?$([regex]::Escape($Archive))\s*$") {
-        $ExpectedHash = $Matches[1]
-        break
+    if ($Line -match "^\s*([a-fA-F0-9]{64})\s+(.+)$") {
+        $ChecksumFile = $Matches[2].Trim()
+
+        if ($ChecksumFile -eq $Archive -or
+            $ChecksumFile -eq "dist/$Archive" -or
+            $ChecksumFile -eq "*$Archive") {
+            $ExpectedHash = $Matches[1]
+            break
+        }
     }
 }
 
@@ -128,7 +188,7 @@ $ActualHash = (
 
 if ($ExpectedHash.ToLower() -ne $ActualHash.ToLower()) {
     Fail @"
-
+```
 
 SHA-256 checksum verification failed.
 
@@ -140,7 +200,7 @@ $ActualHash
 "@
 }
 
-
+```
 Info "Checksum verified."
 
 # --------------------------------------------------------
@@ -239,7 +299,7 @@ Write-Host "Open a new PowerShell window, then run:"
 Write-Host ""
 Write-Host "  telegram-bot-api.exe --help"
 Write-Host ""
-
+```
 
 }
 finally {
