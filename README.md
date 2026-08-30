@@ -1,6 +1,6 @@
 # Telegram Bot API - Prebuilt Binaries
 
-Unofficial prebuilt binaries of the **Telegram Bot API server**, compiled from the official upstream source code.
+Unofficial prebuilt binaries of the **Telegram Bot API server**, compiled from the [official upstream](https://github.com/tdlib/telegram-bot-api) source code.
 
 This repository exists to make it easier to run the Telegram Bot API server without having to compile it yourself.
 
@@ -297,7 +297,7 @@ This repository does not claim ownership of the Telegram Bot API source code or 
 
 Issues and pull requests related to the build system, packaging, installation scripts, and release automation are welcome.
 
-For bugs or feature requests concerning the Telegram Bot API itself, please refer to the official upstream project.
+For bugs or feature requests concerning the Telegram Bot API itself, please refer to the [official upstream](https://github.com/tdlib/telegram-bot-api) project.
 
 ---
 
