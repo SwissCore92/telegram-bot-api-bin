@@ -166,7 +166,10 @@ else
     die "Neither sha256sum nor shasum is available."
 fi
 
-if [ "${EXPECTED_HASH,,}" != "${ACTUAL_HASH,,}" ]; then
+EXPECTED_HASH="$(printf '%s' "$EXPECTED_HASH" | tr '[:upper:]' '[:lower:]')"
+ACTUAL_HASH="$(printf '%s' "$ACTUAL_HASH" | tr '[:upper:]' '[:lower:]')"
+
+if [ "$EXPECTED_HASH" != "$ACTUAL_HASH" ]; then
     die "SHA-256 checksum verification failed.
 Expected:
 $EXPECTED_HASH
