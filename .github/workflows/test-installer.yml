@@ -1,0 +1,150 @@
+name: Test Installers
+
+on:
+push:
+paths:
+- "install.sh"
+- "install.ps1"
+- ".github/workflows/test-installers.yml"
+pull_request:
+paths:
+- "install.sh"
+- "install.ps1"
+- ".github/workflows/test-installers.yml"
+workflow_dispatch:
+
+permissions:
+contents: read
+
+jobs:
+test-linux-amd64:
+name: Linux AMD64
+runs-on: ubuntu-24.04
+
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - name: Check Bash syntax
+    run: bash -n install.sh
+
+  - name: Test help
+    run: bash install.sh --help
+
+  - name: Test installation
+    run: |
+      set -euo pipefail
+
+      INSTALL_DIR="$RUNNER_TEMP/telegram-bot-api-test"
+
+      bash install.sh --install-dir "$INSTALL_DIR"
+
+      test -x "$INSTALL_DIR/telegram-bot-api"
+
+      "$INSTALL_DIR/telegram-bot-api" --help
+
+test-linux-arm64:
+name: Linux ARM64
+runs-on: ubuntu-24.04-arm
+
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - name: Check Bash syntax
+    run: bash -n install.sh
+
+  - name: Test help
+    run: bash install.sh --help
+
+  - name: Test installation
+    run: |
+      set -euo pipefail
+
+      INSTALL_DIR="$RUNNER_TEMP/telegram-bot-api-test"
+
+      bash install.sh --install-dir "$INSTALL_DIR"
+
+      test -x "$INSTALL_DIR/telegram-bot-api"
+
+      "$INSTALL_DIR/telegram-bot-api" --help
+
+test-macos-amd64:
+name: macOS Intel
+runs-on: macos-15-intel
+
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - name: Check Bash syntax
+    run: bash -n install.sh
+
+  - name: Test help
+    run: bash install.sh --help
+
+  - name: Test installation
+    run: |
+      set -euo pipefail
+
+      INSTALL_DIR="$RUNNER_TEMP/telegram-bot-api-test"
+
+      bash install.sh --install-dir "$INSTALL_DIR"
+
+      test -x "$INSTALL_DIR/telegram-bot-api"
+
+      "$INSTALL_DIR/telegram-bot-api" --help
+
+test-macos-arm64:
+name: macOS Apple Silicon
+runs-on: macos-15
+
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - name: Check Bash syntax
+    run: bash -n install.sh
+
+  - name: Test help
+    run: bash install.sh --help
+
+  - name: Test installation
+    run: |
+      set -euo pipefail
+
+      INSTALL_DIR="$RUNNER_TEMP/telegram-bot-api-test"
+
+      bash install.sh --install-dir "$INSTALL_DIR"
+
+      test -x "$INSTALL_DIR/telegram-bot-api"
+
+      "$INSTALL_DIR/telegram-bot-api" --help
+
+test-windows-amd64:
+name: Windows AMD64
+runs-on: windows-2025
+
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - name: Test help
+    shell: pwsh
+    run: |
+      & .\install.ps1 --help
+
+  - name: Test installation
+    shell: pwsh
+    run: |
+      $InstallDir = Join-Path $env:RUNNER_TEMP "telegram-bot-api-test"
+
+      & .\install.ps1 --install-dir $InstallDir
+
+      $BinaryPath = Join-Path $InstallDir "telegram-bot-api.exe"
+
+      if (-not (Test-Path $BinaryPath)) {
+          throw "Installed binary was not found at $BinaryPath"
+      }
+
+      & $BinaryPath --help
