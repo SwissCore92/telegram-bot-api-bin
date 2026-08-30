@@ -1,728 +1,676 @@
+```yaml
 name: Build Telegram Bot API
 
 on:
-push:
-tags:
-- "v*"
+  push:
+    tags:
+      - "v*"
 
-workflow_dispatch:
-inputs:
-upstream_ref:
-description: "Telegram Bot API upstream ref (tag, branch, or commit)"
-required: true
-default: "master"
+  workflow_dispatch:
+    inputs:
+      upstream_ref:
+        description: "Telegram Bot API upstream ref (tag, branch, or commit)"
+        required: true
+        default: "master"
 
 permissions:
-contents: write
+  contents: write
 
 env:
-UPSTREAM_REPO: https://github.com/tdlib/telegram-bot-api.git
+  UPSTREAM_REPO: https://github.com/tdlib/telegram-bot-api.git
 
 jobs:
-resolve:
-name: Resolve upstream source
-runs-on: ubuntu-latest
-
-
-outputs:
-  upstream_commit: ${{ steps.source.outputs.upstream_commit }}
-  upstream_version: ${{ steps.source.outputs.upstream_version }}
-  version: ${{ steps.version.outputs.version }}
-
-steps:
-  - name: Determine upstream source
-    id: source
-    shell: bash
-    run: |
-      set -euo pipefail
-
-      if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-        UPSTREAM_REF="${{ inputs.upstream_ref }}"
-      else
-        UPSTREAM_REF="master"
-      fi
-
-      echo "Upstream ref: $UPSTREAM_REF"
-
-      git clone --recursive \
-        "$UPSTREAM_REPO" \
-        telegram-bot-api
-
-      cd telegram-bot-api
-
-      git checkout "$UPSTREAM_REF"
-      git submodule update --init --recursive
-
-      UPSTREAM_COMMIT="$(git rev-parse HEAD)"
-
-      UPSTREAM_VERSION="$(
-        sed -nE \
-          's/^project\(TelegramBotApi VERSION ([0-9]+\.[0-9]+).*/\1/p' \
-          CMakeLists.txt |
-          head -n 1
-      )"
-
-      if [[ -z "$UPSTREAM_VERSION" ]]; then
-        echo "ERROR: Could not determine Telegram Bot API version from CMakeLists.txt."
-        exit 1
-      fi
-
-      echo "Upstream commit:  $UPSTREAM_COMMIT"
-      echo "Upstream version: $UPSTREAM_VERSION"
-
-      echo "upstream_commit=$UPSTREAM_COMMIT" >> "$GITHUB_OUTPUT"
-      echo "upstream_version=$UPSTREAM_VERSION" >> "$GITHUB_OUTPUT"
-
-  - name: Determine release version
-    id: version
-    shell: bash
-    run: |
-      set -euo pipefail
-
-      if [[ "${{ github.event_name }}" == "push" ]]; then
-        RELEASE_VERSION="${GITHUB_REF_NAME#v}"
-
-        echo "GitHub tag version: $RELEASE_VERSION"
-        echo "Upstream version:   ${{ steps.source.outputs.upstream_version }}"
-
-        if [[ "$RELEASE_VERSION" != "${{ steps.source.outputs.upstream_version }}" ]]; then
-          echo "ERROR: Version mismatch."
-          echo "GitHub tag:       $RELEASE_VERSION"
-          echo "Upstream version: ${{ steps.source.outputs.upstream_version }}"
-          exit 1
-        fi
-
-        echo "Version verification passed."
-
-        echo "version=v${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
-      else
-        echo "Manual build."
-        echo "Using upstream version: ${{ steps.source.outputs.upstream_version }}"
-
-        echo "version=v${{ steps.source.outputs.upstream_version }}" >> "$GITHUB_OUTPUT"
-      fi
-
-
-# ============================================================
-
-# Linux AMD64
-
-# ============================================================
-
-linux-amd64:
-name: Linux AMD64
-needs: resolve
-runs-on: ubuntu-24.04
-
-
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
-
-  - name: Install dependencies
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y \
-        git \
-        cmake \
-        g++ \
-        make \
-        gperf \
-        libssl-dev \
-        zlib1g-dev
-
-  - name: Clone Telegram Bot API
-    run: |
-      git clone --recursive \
-        "$UPSTREAM_REPO" \
-        telegram-bot-api
-
-      cd telegram-bot-api
-      git checkout "${{ needs.resolve.outputs.upstream_commit }}"
-      git submodule update --init --recursive
-
-  - name: Record source revision
-    working-directory: telegram-bot-api
-    run: |
-      git rev-parse HEAD > source-commit.txt
-      cat source-commit.txt
-
-  - name: Build
-    working-directory: telegram-bot-api
-    run: |
-      cmake \
-        -S . \
-        -B build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX="$PWD/install"
-
-      cmake \
-        --build build \
-        --config Release \
-        --parallel "$(nproc)"
-
-      cmake \
-        --install build
-
-  - name: Package
-    shell: bash
-    run: |
-      VERSION="${{ needs.resolve.outputs.version }}"
-      NAME="telegram-bot-api-${VERSION}-linux-amd64"
-
-      mkdir -p "dist/${NAME}"
-
-      cp \
-        telegram-bot-api/install/bin/telegram-bot-api \
-        "dist/${NAME}/"
-
-      test -f LICENSE_1_0.txt
-
-      cp \
-        LICENSE_1_0.txt \
-        "dist/${NAME}/"
-
-      cp \
-        telegram-bot-api/source-commit.txt \
-        "dist/${NAME}/"
-
-      tar \
-        -C dist \
-        -czf "dist/${NAME}.tar.gz" \
-        "${NAME}"
-
-      sha256sum \
-        "dist/${NAME}.tar.gz" \
-        > "dist/${NAME}.tar.gz.sha256"
-
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: linux-amd64
-      path: dist/
-
-
-# ============================================================
-
-# Linux ARM64
-
-# ============================================================
-
-linux-arm64:
-name: Linux ARM64
-needs: resolve
-runs-on: ubuntu-24.04-arm
-
-
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
-
-  - name: Install dependencies
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y \
-        git \
-        cmake \
-        g++ \
-        make \
-        gperf \
-        libssl-dev \
-        zlib1g-dev
-
-  - name: Clone Telegram Bot API
-    run: |
-      git clone --recursive \
-        "$UPSTREAM_REPO" \
-        telegram-bot-api
-
-      cd telegram-bot-api
-      git checkout "${{ needs.resolve.outputs.upstream_commit }}"
-      git submodule update --init --recursive
-
-  - name: Record source revision
-    working-directory: telegram-bot-api
-    run: |
-      git rev-parse HEAD > source-commit.txt
-      cat source-commit.txt
-
-  - name: Build
-    working-directory: telegram-bot-api
-    run: |
-      cmake \
-        -S . \
-        -B build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX="$PWD/install"
-
-      cmake \
-        --build build \
-        --config Release \
-        --parallel "$(nproc)"
-
-      cmake \
-        --install build
-
-  - name: Package
-    shell: bash
-    run: |
-      VERSION="${{ needs.resolve.outputs.version }}"
-      NAME="telegram-bot-api-${VERSION}-linux-arm64"
-
-      mkdir -p "dist/${NAME}"
-
-      cp \
-        telegram-bot-api/install/bin/telegram-bot-api \
-        "dist/${NAME}/"
-
-      test -f LICENSE_1_0.txt
-
-      cp \
-        LICENSE_1_0.txt \
-        "dist/${NAME}/"
-
-      cp \
-        telegram-bot-api/source-commit.txt \
-        "dist/${NAME}/"
-
-      tar \
-        -C dist \
-        -czf "dist/${NAME}.tar.gz" \
-        "${NAME}"
-
-      sha256sum \
-        "dist/${NAME}.tar.gz" \
-        > "dist/${NAME}.tar.gz.sha256"
-
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: linux-arm64
-      path: dist/
-
-
-# ============================================================
-
-# Windows AMD64
-
-# ============================================================
-
-windows-amd64:
-name: Windows AMD64
-needs: resolve
-runs-on: windows-2025
-
-
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
-
-  - name: Clone Telegram Bot API
-    shell: pwsh
-    run: |
-      git clone --recursive `
-        "$env:UPSTREAM_REPO" `
-        telegram-bot-api
-
-      Set-Location telegram-bot-api
-
-      git checkout "${{ needs.resolve.outputs.upstream_commit }}"
-      git submodule update --init --recursive
-
-  - name: Install vcpkg
-    shell: pwsh
-    run: |
-      git clone https://github.com/microsoft/vcpkg.git `
-        "$env:GITHUB_WORKSPACE\vcpkg"
-
-      Set-Location "$env:GITHUB_WORKSPACE\vcpkg"
-
-      .\bootstrap-vcpkg.bat
-
-  - name: Install dependencies
-    shell: pwsh
-    working-directory: telegram-bot-api
-    run: |
-      & "$env:GITHUB_WORKSPACE\vcpkg\vcpkg.exe" install `
-        gperf:x64-windows `
-        openssl:x64-windows `
-        zlib:x64-windows
-
-  - name: Record source revision
-    shell: pwsh
-    working-directory: telegram-bot-api
-    run: |
-      git rev-parse HEAD |
-        Out-File source-commit.txt -Encoding ascii
-
-      Get-Content source-commit.txt
-
-  - name: Configure
-    shell: pwsh
-    working-directory: telegram-bot-api
-    run: |
-      cmake `
-        -S . `
-        -B build `
-        -A x64 `
-        -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
-        -DCMAKE_INSTALL_PREFIX="$PWD/install"
-
-  - name: Build
-    shell: pwsh
-    working-directory: telegram-bot-api
-    run: |
-      cmake `
-        --build build `
-        --config Release `
-        --parallel
-
-  - name: Install
-    shell: pwsh
-    working-directory: telegram-bot-api
-    run: |
-      cmake `
-        --install build `
-        --config Release
-
-  - name: Package
-    shell: pwsh
-    run: |
-      $VERSION = "${{ needs.resolve.outputs.version }}"
-      $NAME = "telegram-bot-api-$VERSION-windows-amd64"
-
-      New-Item `
-        -ItemType Directory `
-        -Force `
-        "dist/$NAME" | Out-Null
-
-      Copy-Item `
-        "telegram-bot-api/install/bin/telegram-bot-api.exe" `
-        "dist/$NAME/"
-
-      if (-not (Test-Path "LICENSE_1_0.txt")) {
-          throw "LICENSE_1_0.txt is missing from the repository."
-      }
-
-      Copy-Item `
-        "LICENSE_1_0.txt" `
-        "dist/$NAME/"
-
-      Copy-Item `
-        "telegram-bot-api/source-commit.txt" `
-        "dist/$NAME/"
-
-      Get-ChildItem `
-        "telegram-bot-api/install/bin/*.dll" `
-        -ErrorAction SilentlyContinue |
-        Copy-Item -Destination "dist/$NAME/"
-
-      Compress-Archive `
-        -Path "dist/$NAME/*" `
-        -DestinationPath "dist/$NAME.zip"
-
-      $hash = (
-        Get-FileHash `
-          "dist/$NAME.zip" `
-          -Algorithm SHA256
-      ).Hash.ToLower()
-
-      "$hash  $NAME.zip" |
-        Out-File `
-          "dist/$NAME.zip.sha256" `
-          -Encoding ascii
-
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: windows-amd64
-      path: dist/
-
-
-# ============================================================
-
-# macOS Intel
-
-# ============================================================
-
-macos-amd64:
-name: macOS Intel
-needs: resolve
-runs-on: macos-15-intel
-
-
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
-
-  - name: Install dependencies
-    run: |
-      brew update
-      brew install \
-        cmake \
-        gperf \
-        openssl \
-        zlib
-
-  - name: Clone Telegram Bot API
-    run: |
-      git clone --recursive \
-        "$UPSTREAM_REPO" \
-        telegram-bot-api
-
-      cd telegram-bot-api
-      git checkout "${{ needs.resolve.outputs.upstream_commit }}"
-      git submodule update --init --recursive
-
-  - name: Record source revision
-    working-directory: telegram-bot-api
-    run: |
-      git rev-parse HEAD > source-commit.txt
-      cat source-commit.txt
-
-  - name: Build
-    working-directory: telegram-bot-api
-    run: |
-      cmake \
-        -S . \
-        -B build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX="$PWD/install" \
-        -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)"
-
-      cmake \
-        --build build \
-        --config Release \
-        --parallel "$(sysctl -n hw.ncpu)"
-
-      cmake \
-        --install build
-
-  - name: Package
-    run: |
-      VERSION="${{ needs.resolve.outputs.version }}"
-      NAME="telegram-bot-api-${VERSION}-macos-amd64"
-
-      mkdir -p "dist/${NAME}"
-
-      cp \
-        telegram-bot-api/install/bin/telegram-bot-api \
-        "dist/${NAME}/"
-
-      test -f LICENSE_1_0.txt
-
-      cp \
-        LICENSE_1_0.txt \
-        "dist/${NAME}/"
-
-      cp \
-        telegram-bot-api/source-commit.txt \
-        "dist/${NAME}/"
-
-      tar \
-        -C dist \
-        -czf "dist/${NAME}.tar.gz" \
-        "${NAME}"
-
-      shasum -a 256 \
-        "dist/${NAME}.tar.gz" \
-        > "dist/${NAME}.tar.gz.sha256"
-
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: macos-amd64
-      path: dist/
-
-
-# ============================================================
-
-# macOS Apple Silicon
-
-# ============================================================
-
-macos-arm64:
-name: macOS Apple Silicon
-needs: resolve
-runs-on: macos-15
-
-
-steps:
-  - name: Checkout
-    uses: actions/checkout@v4
-
-  - name: Install dependencies
-    run: |
-      brew update
-      brew install \
-        cmake \
-        gperf \
-        openssl \
-        zlib
-
-  - name: Clone Telegram Bot API
-    run: |
-      git clone --recursive \
-        "$UPSTREAM_REPO" \
-        telegram-bot-api
-
-      cd telegram-bot-api
-      git checkout "${{ needs.resolve.outputs.upstream_commit }}"
-      git submodule update --init --recursive
-
-  - name: Record source revision
-    working-directory: telegram-bot-api
-    run: |
-      git rev-parse HEAD > source-commit.txt
-      cat source-commit.txt
-
-  - name: Build
-    working-directory: telegram-bot-api
-    run: |
-      cmake \
-        -S . \
-        -B build \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX="$PWD/install" \
-        -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)"
-
-      cmake \
-        --build build \
-        --config Release \
-        --parallel "$(sysctl -n hw.ncpu)"
-
-      cmake \
-        --install build
-
-  - name: Package
-    run: |
-      VERSION="${{ needs.resolve.outputs.version }}"
-      NAME="telegram-bot-api-${VERSION}-macos-arm64"
-
-      mkdir -p "dist/${NAME}"
-
-      cp \
-        telegram-bot-api/install/bin/telegram-bot-api \
-        "dist/${NAME}/"
-
-      test -f LICENSE_1_0.txt
-
-      cp \
-        LICENSE_1_0.txt \
-        "dist/${NAME}/"
-
-      cp \
-        telegram-bot-api/source-commit.txt \
-        "dist/${NAME}/"
-
-      tar \
-        -C dist \
-        -czf "dist/${NAME}.tar.gz" \
-        "${NAME}"
-
-      shasum -a 256 \
-        "dist/${NAME}.tar.gz" \
-        > "dist/${NAME}.tar.gz.sha256"
-
-  - name: Upload artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: macos-arm64
-      path: dist/
-
-
-# ============================================================
-
-# Publish Release
-
-# ============================================================
-
-release:
-name: Publish GitHub Release
-
-
-needs:
-  - resolve
-  - linux-amd64
-  - linux-arm64
-  - windows-amd64
-  - macos-amd64
-  - macos-arm64
-
-if: github.event_name == 'push'
-
-runs-on: ubuntu-latest
-
-steps:
-  - name: Download Linux AMD64
-    uses: actions/download-artifact@v4
-    with:
-      name: linux-amd64
-      path: release
-
-  - name: Download Linux ARM64
-    uses: actions/download-artifact@v4
-    with:
-      name: linux-arm64
-      path: release
-
-  - name: Download Windows AMD64
-    uses: actions/download-artifact@v4
-    with:
-      name: windows-amd64
-      path: release
-
-  - name: Download macOS Intel
-    uses: actions/download-artifact@v4
-    with:
-      name: macos-amd64
-      path: release
-
-  - name: Download macOS Apple Silicon
-    uses: actions/download-artifact@v4
-    with:
-      name: macos-arm64
-      path: release
-
-  - name: Generate combined checksums
-    working-directory: release
-    shell: bash
-    run: |
-      cat *.sha256 > SHA256SUMS.txt
-
-  - name: List release files
-    run: |
-      find release -maxdepth 1 -type f -print | sort
-
-  - name: Create GitHub Release
-    uses: softprops/action-gh-release@v2
-    with:
-      tag_name: ${{ needs.resolve.outputs.version }}
-      name: Telegram Bot API ${{ needs.resolve.outputs.version }}
-      body: |
-        ## Telegram Bot API ${{ needs.resolve.outputs.upstream_version }}
-
-        Prebuilt Telegram Bot API server binaries for:
-
-        - Linux AMD64
-        - Linux ARM64
-        - Windows AMD64
-        - macOS Intel
-        - macOS Apple Silicon
-
-        ### Upstream source
-
-        Repository: https://github.com/tdlib/telegram-bot-api
-        Commit: `${{ needs.resolve.outputs.upstream_commit }}`
-
-        The binaries were built from this exact upstream commit.
-
-        Each release archive includes the Boost Software License 1.0.
-      generate_release_notes: true
-      prerelease: false
-      files: |
-        release/*.tar.gz
-        release/*.zip
-        release/*.sha256
-        release/SHA256SUMS.txt
-
+  resolve:
+    name: Resolve upstream source
+    runs-on: ubuntu-latest
+
+    outputs:
+      upstream_commit: ${{ steps.source.outputs.upstream_commit }}
+      upstream_version: ${{ steps.source.outputs.upstream_version }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Determine upstream source
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            UPSTREAM_REF="${{ inputs.upstream_ref }}"
+          else
+            UPSTREAM_REF="master"
+          fi
+
+          echo "Upstream ref: $UPSTREAM_REF"
+
+          git clone --recursive \
+            "$UPSTREAM_REPO" \
+            telegram-bot-api
+
+          cd telegram-bot-api
+
+          git fetch --all --tags
+          git checkout "$UPSTREAM_REF"
+          git submodule update --init --recursive
+
+          UPSTREAM_COMMIT="$(git rev-parse HEAD)"
+
+          UPSTREAM_VERSION="$(
+            sed -nE \
+              's/^project\(TelegramBotApi VERSION ([0-9]+\.[0-9]+).*/\1/p' \
+              CMakeLists.txt |
+              head -n 1
+          )"
+
+          if [[ -z "$UPSTREAM_VERSION" ]]; then
+            echo "ERROR: Could not determine Telegram Bot API version from CMakeLists.txt."
+            exit 1
+          fi
+
+          echo "Upstream commit:  $UPSTREAM_COMMIT"
+          echo "Upstream version: $UPSTREAM_VERSION"
+
+          echo "upstream_commit=$UPSTREAM_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "upstream_version=$UPSTREAM_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Determine release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+
+            echo "GitHub tag version: $RELEASE_VERSION"
+            echo "Upstream version:   ${{ steps.source.outputs.upstream_version }}"
+
+            if [[ "$RELEASE_VERSION" != "${{ steps.source.outputs.upstream_version }}" ]]; then
+              echo "ERROR: Version mismatch."
+              echo "GitHub tag:       $RELEASE_VERSION"
+              echo "Upstream version: ${{ steps.source.outputs.upstream_version }}"
+              exit 1
+            fi
+
+            echo "Version verification passed."
+
+            echo "version=v${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Manual build."
+            echo "Using upstream version: ${{ steps.source.outputs.upstream_version }}"
+
+            echo "version=v${{ steps.source.outputs.upstream_version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+  linux-amd64:
+    name: Linux AMD64
+    needs: resolve
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            cmake \
+            g++ \
+            make \
+            gperf \
+            libssl-dev \
+            zlib1g-dev
+
+      - name: Clone Telegram Bot API
+        run: |
+          git clone --recursive \
+            "$UPSTREAM_REPO" \
+            telegram-bot-api
+
+          cd telegram-bot-api
+          git fetch --all --tags
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
+          git submodule update --init --recursive
+
+      - name: Record source revision
+        working-directory: telegram-bot-api
+        run: |
+          git rev-parse HEAD > source-commit.txt
+          cat source-commit.txt
+
+      - name: Build
+        working-directory: telegram-bot-api
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install"
+
+          cmake \
+            --build build \
+            --config Release \
+            --parallel "$(nproc)"
+
+          cmake \
+            --install build
+
+      - name: Package
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve.outputs.version }}"
+          NAME="telegram-bot-api-${VERSION}-linux-amd64"
+
+          mkdir -p "dist/${NAME}"
+
+          cp telegram-bot-api/install/bin/telegram-bot-api \
+            "dist/${NAME}/"
+
+          test -f LICENSE_1_0.txt
+          cp LICENSE_1_0.txt \
+            "dist/${NAME}/"
+
+          cp telegram-bot-api/source-commit.txt \
+            "dist/${NAME}/"
+
+          tar \
+            -C dist \
+            -czf "dist/${NAME}.tar.gz" \
+            "${NAME}"
+
+          sha256sum \
+            "dist/${NAME}.tar.gz" \
+            > "dist/${NAME}.tar.gz.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64
+          path: dist/
+
+  linux-arm64:
+    name: Linux ARM64
+    needs: resolve
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            git \
+            cmake \
+            g++ \
+            make \
+            gperf \
+            libssl-dev \
+            zlib1g-dev
+
+      - name: Clone Telegram Bot API
+        run: |
+          git clone --recursive \
+            "$UPSTREAM_REPO" \
+            telegram-bot-api
+
+          cd telegram-bot-api
+          git fetch --all --tags
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
+          git submodule update --init --recursive
+
+      - name: Record source revision
+        working-directory: telegram-bot-api
+        run: |
+          git rev-parse HEAD > source-commit.txt
+          cat source-commit.txt
+
+      - name: Build
+        working-directory: telegram-bot-api
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install"
+
+          cmake \
+            --build build \
+            --config Release \
+            --parallel "$(nproc)"
+
+          cmake \
+            --install build
+
+      - name: Package
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve.outputs.version }}"
+          NAME="telegram-bot-api-${VERSION}-linux-arm64"
+
+          mkdir -p "dist/${NAME}"
+
+          cp telegram-bot-api/install/bin/telegram-bot-api \
+            "dist/${NAME}/"
+
+          test -f LICENSE_1_0.txt
+          cp LICENSE_1_0.txt \
+            "dist/${NAME}/"
+
+          cp telegram-bot-api/source-commit.txt \
+            "dist/${NAME}/"
+
+          tar \
+            -C dist \
+            -czf "dist/${NAME}.tar.gz" \
+            "${NAME}"
+
+          sha256sum \
+            "dist/${NAME}.tar.gz" \
+            > "dist/${NAME}.tar.gz.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: dist/
+
+  windows-amd64:
+    name: Windows AMD64
+    needs: resolve
+    runs-on: windows-2025
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clone Telegram Bot API
+        shell: pwsh
+        run: |
+          git clone --recursive `
+            "$env:UPSTREAM_REPO" `
+            telegram-bot-api
+
+          Set-Location telegram-bot-api
+          git fetch --all --tags
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
+          git submodule update --init --recursive
+
+      - name: Install vcpkg
+        shell: pwsh
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git `
+            "$env:GITHUB_WORKSPACE\vcpkg"
+
+          Set-Location "$env:GITHUB_WORKSPACE\vcpkg"
+          .\bootstrap-vcpkg.bat
+
+      - name: Install dependencies
+        shell: pwsh
+        working-directory: telegram-bot-api
+        run: |
+          & "$env:GITHUB_WORKSPACE\vcpkg\vcpkg.exe" install `
+            gperf:x64-windows `
+            openssl:x64-windows `
+            zlib:x64-windows
+
+      - name: Record source revision
+        shell: pwsh
+        working-directory: telegram-bot-api
+        run: |
+          git rev-parse HEAD |
+            Out-File source-commit.txt -Encoding ascii
+
+          Get-Content source-commit.txt
+
+      - name: Configure
+        shell: pwsh
+        working-directory: telegram-bot-api
+        run: |
+          cmake `
+            -S . `
+            -B build `
+            -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_INSTALL_PREFIX="$PWD/install"
+
+      - name: Build
+        shell: pwsh
+        working-directory: telegram-bot-api
+        run: |
+          cmake `
+            --build build `
+            --config Release `
+            --parallel
+
+      - name: Install
+        shell: pwsh
+        working-directory: telegram-bot-api
+        run: |
+          cmake `
+            --install build `
+            --config Release
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $VERSION = "${{ needs.resolve.outputs.version }}"
+          $NAME = "telegram-bot-api-$VERSION-windows-amd64"
+
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            "dist/$NAME" | Out-Null
+
+          Copy-Item `
+            "telegram-bot-api/install/bin/telegram-bot-api.exe" `
+            "dist/$NAME/"
+
+          if (-not (Test-Path "LICENSE_1_0.txt")) {
+            throw "LICENSE_1_0.txt is missing from the repository."
+          }
+
+          Copy-Item `
+            "LICENSE_1_0.txt" `
+            "dist/$NAME/"
+
+          Copy-Item `
+            "telegram-bot-api/source-commit.txt" `
+            "dist/$NAME/"
+
+          Get-ChildItem `
+            "telegram-bot-api/install/bin/*.dll" `
+            -ErrorAction SilentlyContinue |
+            Copy-Item -Destination "dist/$NAME/"
+
+          Compress-Archive `
+            -Path "dist/$NAME/*" `
+            -DestinationPath "dist/$NAME.zip"
+
+          $hash = (
+            Get-FileHash `
+              "dist/$NAME.zip" `
+              -Algorithm SHA256
+          ).Hash.ToLower()
+
+          "$hash  $NAME.zip" |
+            Out-File `
+              "dist/$NAME.zip.sha256" `
+              -Encoding ascii
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64
+          path: dist/
+
+  macos-amd64:
+    name: macOS Intel
+    needs: resolve
+    runs-on: macos-15-intel
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install \
+            cmake \
+            gperf \
+            openssl \
+            zlib
+
+      - name: Clone Telegram Bot API
+        run: |
+          git clone --recursive \
+            "$UPSTREAM_REPO" \
+            telegram-bot-api
+
+          cd telegram-bot-api
+          git fetch --all --tags
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
+          git submodule update --init --recursive
+
+      - name: Record source revision
+        working-directory: telegram-bot-api
+        run: |
+          git rev-parse HEAD > source-commit.txt
+          cat source-commit.txt
+
+      - name: Build
+        working-directory: telegram-bot-api
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install" \
+            -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)"
+
+          cmake \
+            --build build \
+            --config Release \
+            --parallel "$(sysctl -n hw.ncpu)"
+
+          cmake \
+            --install build
+
+      - name: Package
+        run: |
+          VERSION="${{ needs.resolve.outputs.version }}"
+          NAME="telegram-bot-api-${VERSION}-macos-amd64"
+
+          mkdir -p "dist/${NAME}"
+
+          cp telegram-bot-api/install/bin/telegram-bot-api \
+            "dist/${NAME}/"
+
+          test -f LICENSE_1_0.txt
+          cp LICENSE_1_0.txt \
+            "dist/${NAME}/"
+
+          cp telegram-bot-api/source-commit.txt \
+            "dist/${NAME}/"
+
+          tar \
+            -C dist \
+            -czf "dist/${NAME}.tar.gz" \
+            "${NAME}"
+
+          shasum -a 256 \
+            "dist/${NAME}.tar.gz" \
+            > "dist/${NAME}.tar.gz.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-amd64
+          path: dist/
+
+  macos-arm64:
+    name: macOS Apple Silicon
+    needs: resolve
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install \
+            cmake \
+            gperf \
+            openssl \
+            zlib
+
+      - name: Clone Telegram Bot API
+        run: |
+          git clone --recursive \
+            "$UPSTREAM_REPO" \
+            telegram-bot-api
+
+          cd telegram-bot-api
+          git fetch --all --tags
+          git checkout "${{ needs.resolve.outputs.upstream_commit }}"
+          git submodule update --init --recursive
+
+      - name: Record source revision
+        working-directory: telegram-bot-api
+        run: |
+          git rev-parse HEAD > source-commit.txt
+          cat source-commit.txt
+
+      - name: Build
+        working-directory: telegram-bot-api
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install" \
+            -DOPENSSL_ROOT_DIR="$(brew --prefix openssl)"
+
+          cmake \
+            --build build \
+            --config Release \
+            --parallel "$(sysctl -n hw.ncpu)"
+
+          cmake \
+            --install build
+
+      - name: Package
+        run: |
+          VERSION="${{ needs.resolve.outputs.version }}"
+          NAME="telegram-bot-api-${VERSION}-macos-arm64"
+
+          mkdir -p "dist/${NAME}"
+
+          cp telegram-bot-api/install/bin/telegram-bot-api \
+            "dist/${NAME}/"
+
+          test -f LICENSE_1_0.txt
+          cp LICENSE_1_0.txt \
+            "dist/${NAME}/"
+
+          cp telegram-bot-api/source-commit.txt \
+            "dist/${NAME}/"
+
+          tar \
+            -C dist \
+            -czf "dist/${NAME}.tar.gz" \
+            "${NAME}"
+
+          shasum -a 256 \
+            "dist/${NAME}.tar.gz" \
+            > "dist/${NAME}.tar.gz.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64
+          path: dist/
+
+  release:
+    name: Publish GitHub Release
+    if: github.event_name == 'push'
+    needs:
+      - resolve
+      - linux-amd64
+      - linux-arm64
+      - windows-amd64
+      - macos-amd64
+      - macos-arm64
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Linux AMD64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-amd64
+          path: release
+
+      - name: Download Linux ARM64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: release
+
+      - name: Download Windows AMD64
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-amd64
+          path: release
+
+      - name: Download macOS Intel
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-amd64
+          path: release
+
+      - name: Download macOS Apple Silicon
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64
+          path: release
+
+      - name: Generate combined checksums
+        working-directory: release
+        shell: bash
+        run: |
+          cat *.sha256 > SHA256SUMS.txt
+
+      - name: List release files
+        run: |
+          find release -maxdepth 1 -type f -print | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve.outputs.version }}
+          name: Telegram Bot API ${{ needs.resolve.outputs.version }}
+          body: |
+            ## Telegram Bot API ${{ needs.resolve.outputs.upstream_version }}
+
+            Prebuilt Telegram Bot API server binaries for:
+
+            - Linux AMD64
+            - Linux ARM64
+            - Windows AMD64
+            - macOS Intel
+            - macOS Apple Silicon
+
+            ### Upstream source
+
+            Repository: https://github.com/tdlib/telegram-bot-api
+            Commit: `${{ needs.resolve.outputs.upstream_commit }}`
+
+            The binaries were built from this exact upstream commit.
+
+            Each release archive includes the Boost Software License 1.0.
+          generate_release_notes: true
+          prerelease: false
+          files: |
+            release/*.tar.gz
+            release/*.zip
+            release/*.sha256
+            release/SHA256SUMS.txt
+```
