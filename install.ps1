@@ -196,29 +196,15 @@ $ActualHash
         -Path $ArchivePath `
         -DestinationPath $ExtractDir `
         -Force
-    
-    Get-ChildItem -Path $ExtractDir -Recurse | ForEach-Object {
-        Write-Host $_.FullName
-    }
 
-    $SourceDir = Get-ChildItem `
-        -Path $ExtractDir `
-        -Directory `
-        -Filter "telegram-bot-api-$Tag-$Platform" |
-        Select-Object -First 1
-
-    if ($null -eq $SourceDir) {
-        Fail "Extracted Telegram Bot API directory was not found."
-    }
-
-    $BinaryPath = Join-Path $SourceDir.FullName $BinaryName
+    $BinaryPath = Join-Path $ExtractDir $BinaryName
 
     if (-not (Test-Path $BinaryPath)) {
         Fail "Binary was not found in the downloaded archive."
     }
 
     $DllFiles = Get-ChildItem `
-        -Path $SourceDir.FullName `
+        -Path $ExtractDir `
         -Filter "*.dll" `
         -File
 
@@ -232,7 +218,10 @@ $ActualHash
 
     Info "Installing to $InstallDir..."
 
-    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    New-Item `
+        -ItemType Directory `
+        -Path $InstallDir `
+        -Force | Out-Null
 
     Copy-Item `
         -Path $BinaryPath `
