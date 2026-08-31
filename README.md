@@ -1,5 +1,8 @@
 # Telegram Bot API - Prebuilt Binaries
 
+[![Latest Release](https://img.shields.io/github/v/release/SwissCore92/telegram-bot-api-binaries?label=Telegram%20Bot%20API)](https://github.com/SwissCore92/telegram-bot-api-binaries/releases/latest)
+[![Installer Tests](https://github.com/SwissCore92/telegram-bot-api-binaries/actions/workflows/test-installer.yml/badge.svg)](https://github.com/SwissCore92/telegram-bot-api-binaries/actions/workflows/test-installer.yml?style=for-the-badge)
+
 Unofficial prebuilt binaries of the **Telegram Bot API server**, compiled from the [official upstream](https://github.com/tdlib/telegram-bot-api) source code.
 
 This repository exists to make it easier to run the Telegram Bot API server without having to compile it yourself.
@@ -28,7 +31,6 @@ Please refer to the upstream repository for the source code, official documentat
 * [SHA-256 Checksums](#sha-256-checksums)
 * [Source Provenance](#source-provenance)
 * [Building From Source](#building-from-source)
-* [Automated Builds](#automated-builds)
 * [Licensing](#licensing)
 * [Contributing](#contributing)
 
@@ -50,7 +52,9 @@ The easiest way to install the latest release is to use the appropriate installe
 
 The installers automatically determine the latest GitHub Release and download the correct binary for the current platform and architecture.
 
-### Linux
+> **Security note:** If you prefer not to pipe a remote script directly into your shell, use [Manual Installation](#manual-installation) instead.
+
+### Linux / macOS
 
 Run:
 
@@ -58,25 +62,21 @@ Run:
 curl -fsSL https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.sh | bash
 ```
 
-By default, the installer installs the `telegram-bot-api` executable to a user-local directory.
+By default, the installer installs the `telegram-bot-api` executable to:
 
-After installation, verify it with:
-
-```bash
-telegram-bot-api --help
+```text
+/usr/local/bin
 ```
 
-If the command is not found, make sure the install directory is included in your `PATH`.
+If you do not want to install into `/usr/local/bin`, you can specify a custom installation directory with `--install-dir`.
 
-### macOS
-
-Run:
+For example, to install into a directory inside the current project:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.sh | bash -s -- --install-dir ./bin
 ```
 
-The installer automatically detects whether the Mac is Intel or Apple Silicon and downloads the corresponding binary.
+The directory is created automatically if it does not already exist.
 
 After installation, verify it with:
 
@@ -99,8 +99,6 @@ After installation, open a new PowerShell window and verify it with:
 ```powershell
 telegram-bot-api.exe --help
 ```
-
-> **Security note:** If you prefer not to pipe a remote script directly into your shell, use [Manual Installation](#manual-installation) instead.
 
 ## Manual Installation
 
@@ -261,22 +259,6 @@ If you prefer to build the server yourself, use the official Telegram Bot API so
 https://github.com/tdlib/telegram-bot-api
 
 This repository does not modify the Telegram Bot API source code.
-
-## Automated Builds
-
-The binaries are built automatically using GitHub Actions.
-
-The build process:
-
-1. Obtains the upstream Telegram Bot API source code.
-2. Resolves the exact upstream source commit.
-3. Verifies the Telegram Bot API version.
-4. Builds the server for each supported platform.
-5. Packages the resulting executable.
-6. Includes the applicable upstream license.
-7. Records the upstream source commit.
-8. Generates SHA-256 checksums.
-9. Publishes the binaries as GitHub Release assets.
 
 ## Licensing
 
