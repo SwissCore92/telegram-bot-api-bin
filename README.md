@@ -25,8 +25,7 @@ Please refer to the upstream repository for the source code, official documentat
 
 * [Supported Platforms](#supported-platforms)
 * [Quick Install](#quick-install)
-  * [Linux](#linux)
-  * [macOS](#macos)
+  * [Linux / macOS](#linux--macos)
   * [Windows](#windows)
 * [Manual Installation](#manual-installation)
 * [Usage](#usage)
