@@ -24,6 +24,27 @@ Options:
 "@
 }
 
+function Invoke-WithRetry {
+    param(
+        [scriptblock]$Script,
+        [int]$MaxAttempts = 5,
+        [int]$DelaySeconds = 2
+    )
+
+    for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt++) {
+        try {
+            return & $Script
+        }
+        catch {
+            if ($Attempt -eq $MaxAttempts) {
+                throw
+            }
+
+            Start-Sleep -Seconds $DelaySeconds
+        }
+    }
+}
+
 # ------------------------------------------------------------
 # Parse arguments
 # ------------------------------------------------------------
@@ -93,9 +114,11 @@ try {
 
     Info "Fetching latest release..."
 
-    $Release = Invoke-RestMethod `
-        -Uri $ApiUrl `
-        -Headers $Headers
+    $Release = Invoke-WithRetry {
+        Invoke-RestMethod `
+            -Uri $ApiUrl `
+            -Headers $Headers
+    }
 
     $Tag = $Release.tag_name
 
@@ -115,9 +138,11 @@ try {
     $DownloadUrl = "https://github.com/$Repo/releases/download/$Tag/$Archive"
     $ArchivePath = Join-Path $TempDir $Archive
 
-    Invoke-WebRequest `
-        -Uri $DownloadUrl `
-        -OutFile $ArchivePath
+    Invoke-WithRetry {
+        Invoke-WebRequest `
+            -Uri $DownloadUrl `
+            -OutFile $ArchivePath
+    }
 
     # --------------------------------------------------------
     # Download checksums
@@ -128,9 +153,11 @@ try {
 
     Info "Downloading checksums..."
 
-    Invoke-WebRequest `
-        -Uri $ChecksumUrl `
-        -OutFile $ChecksumPath
+    Invoke-WithRetry {
+        Invoke-WebRequest `
+            -Uri $ChecksumUrl `
+            -OutFile $ChecksumPath
+    }
 
     # --------------------------------------------------------
     # Verify SHA-256
