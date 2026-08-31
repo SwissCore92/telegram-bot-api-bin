@@ -319,18 +319,6 @@ jobs:
 
           Set-Location "$env:GITHUB_WORKSPACE\vcpkg"
           .\bootstrap-vcpkg.bat
-      
-      - name: Install vcpkg
-        shell: pwsh
-        run: |
-          git clone `
-            --depth 1 `
-            --branch "$env:VCPKG_VERSION" `
-            https://github.com/microsoft/vcpkg.git `
-            "$env:GITHUB_WORKSPACE\vcpkg"
-
-          Set-Location "$env:GITHUB_WORKSPACE\vcpkg"
-          .\bootstrap-vcpkg.bat
 
       - name: Cache vcpkg binaries
         uses: actions/cache@v4
@@ -341,10 +329,19 @@ jobs:
       - name: Configure vcpkg binary cache
         shell: pwsh
         run: |
-          "VCPKG_DEFAULT_BINARY_CACHE=$env:GITHUB_WORKSPACE\vcpkg-cache" |
+          $cache = "$env:GITHUB_WORKSPACE\vcpkg-cache"
+
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path $cache | Out-Null
+
+          "VCPKG_DEFAULT_BINARY_CACHE=$cache" |
             Out-File `
               -FilePath $env:GITHUB_ENV `
               -Append
+
+          Write-Host "vcpkg binary cache: $cache"
 
       - name: Install dependencies
         shell: pwsh
