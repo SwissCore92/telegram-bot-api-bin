@@ -1,11 +1,11 @@
 # Telegram Bot API - Prebuilt Binaries
 
-[![Latest Release](https://img.shields.io/github/v/release/SwissCore92/telegram-bot-api-binaries?label=Telegram%20Bot%20API)](https://github.com/SwissCore92/telegram-bot-api-binaries/releases/latest)
-[![Installer Tests](https://github.com/SwissCore92/telegram-bot-api-binaries/actions/workflows/test-installer.yml/badge.svg)](https://github.com/SwissCore92/telegram-bot-api-binaries/actions/workflows/test-installer.yml?style=for-the-badge)
+[![Telegram Bot API](https://img.shields.io/github/v/release/SwissCore92/telegram-bot-api-binaries?label=Telegram%20Bot%20API&logo=telegram&logoColor=white&style=for-the-badge)](https://github.com/SwissCore92/telegram-bot-api-binaries/releases/latest)
+[![Installer Tests](https://img.shields.io/github/actions/workflow/status/SwissCore92/telegram-bot-api-binaries/test-installer.yml?style=for-the-badge&label=Installer%20Tests&logo=githubactions&logoColor=white)](https://github.com/SwissCore92/telegram-bot-api-binaries/actions/workflows/test-installer.yml)
 
 Unofficial prebuilt binaries of the **Telegram Bot API server**, compiled from the [official upstream](https://github.com/tdlib/telegram-bot-api) source code.
 
-This repository exists to make it easier to run the Telegram Bot API server without having to compile it yourself.
+This repository exists to make it easier to run the Telegram Bot API server locally without having to compile it yourself. You can simply install/update your local `telegram-bot-api` with [one command](#quick-install).
 
 ## Important
 
@@ -17,6 +17,8 @@ The official Telegram Bot API server source code is maintained by Telegram and i
 
 https://github.com/tdlib/telegram-bot-api
 
+**This repository does not modify the Telegram Bot API source code.**
+
 Please refer to the upstream repository for the source code, official documentation, licensing information, and build instructions.
 
 ## Table of Contents
@@ -27,6 +29,7 @@ Please refer to the upstream repository for the source code, official documentat
   * [macOS](#macos)
   * [Windows](#windows)
 * [Manual Installation](#manual-installation)
+* [Usage](#usage)
 * [Releases](#releases)
 * [SHA-256 Checksums](#sha-256-checksums)
 * [Source Provenance](#source-provenance)
@@ -62,26 +65,12 @@ Run:
 curl -fsSL https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.sh | bash
 ```
 
-By default, the installer installs the `telegram-bot-api` executable to:
-
-```text
-/usr/local/bin
-```
-
-If you do not want to install into `/usr/local/bin`, you can specify a custom installation directory with `--install-dir`.
-
-For example, to install into a directory inside the current project:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.sh | bash -s -- --install-dir ./bin
-```
-
-The directory is created automatically if it does not already exist.
+By default, the installer installs the `telegram-bot-api` executable to `/usr/local/bin`.
 
 After installation, verify it with:
 
 ```bash
-telegram-bot-api --help
+telegram-bot-api --version
 ```
 
 ### Windows
@@ -92,101 +81,62 @@ Open PowerShell and run:
 irm https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.ps1 | iex
 ```
 
-The installer automatically downloads the Windows AMD64 release.
+By default, the installer installs the `telegram-bot-api.exe` and its required `dll`s to `%LOCALAPPDATA%\Telegram Bot API`.
 
 After installation, open a new PowerShell window and verify it with:
 
 ```powershell
-telegram-bot-api.exe --help
+telegram-bot-api.exe --version
 ```
 
 ## Manual Installation
 
 Prebuilt binaries can also be downloaded directly from the [Releases](../../releases) page.
 
-Choose the archive matching your operating system and architecture.
+Download and extract the archive matching your operating system and architecture.
 
-### Linux AMD64
+### Linux / macOS
 
-Download:
-
-```text
-telegram-bot-api-v10.3-linux-amd64.tar.gz
-```
-
-Extract it:
+Recommended installation path is `/usr/local/bin`.
 
 ```bash
-tar -xzf telegram-bot-api-v10.3-linux-amd64.tar.gz
+sudo install -m 755 <path/to/extracted/files/telegram-bot-api> /usr/local/bin
 ```
+If you choose another location, make sure it is in `PATH`.
 
-The extracted directory contains:
-
-```text
-telegram-bot-api
-LICENSE_1_0.txt
-source-commit.txt
-```
-
-### Linux ARM64
-
-Download:
-
-```text
-telegram-bot-api-v10.3-linux-arm64.tar.gz
-```
-
-Extract it:
+verify:
 
 ```bash
-tar -xzf telegram-bot-api-v10.3-linux-arm64.tar.gz
+telegram-bot-api --version
 ```
 
-### macOS Intel
+### Windows
 
-Download:
-
-```text
-telegram-bot-api-v10.3-macos-amd64.tar.gz
-```
-
-Extract it:
-
-```bash
-tar -xzf telegram-bot-api-v10.3-macos-amd64.tar.gz
-```
-
-### macOS Apple Silicon
-
-Download:
-
-```text
-telegram-bot-api-v10.3-macos-arm64.tar.gz
-```
-
-Extract it:
-
-```bash
-tar -xzf telegram-bot-api-v10.3-macos-arm64.tar.gz
-```
-
-### Windows AMD64
-
-Download:
-
-```text
-telegram-bot-api-v10.3-windows-amd64.zip
-```
-
-Extract the ZIP archive using File Explorer or PowerShell.
-
-For example:
+Recommended installation path is `%LOCALAPPDATA%\Telegram Bot API`.
 
 ```powershell
-Expand-Archive telegram-bot-api-v10.3-windows-amd64.zip .
+New-Item -ItemType Directory -Path "$env:LOCALAPPDATA\Telegram Bot API" -Force
+
+Copy-Item `
+    "<path\to\extracted\files>\*" `
+    "$env:LOCALAPPDATA\Telegram Bot API" `
+    -Recurse `
+    -Force
 ```
 
-The Windows archive contains the executable and any required DLL files.
+The directory should contain `telegram-bot-api.exe` **and its required DLL files**.
+
+If you choose another location, make sure it is in `PATH`.
+
+verify:
+
+```powershell
+telegram-bot-api.exe --version
+```
+
+## Usage
+
+For details about usage, check the [official documentation](https://github.com/tdlib/telegram-bot-api#usage).
 
 ## Releases
 
@@ -207,8 +157,6 @@ telegram-bot-api-v10.3-windows-amd64.zip
 telegram-bot-api-v10.3-macos-amd64.tar.gz
 telegram-bot-api-v10.3-macos-arm64.tar.gz
 ```
-
-There is no additional version number specific to this repository.
 
 Prebuilt binaries are available on the [Releases](../../releases) page.
 
@@ -257,8 +205,6 @@ This prevents accidentally publishing a release under the wrong Telegram Bot API
 If you prefer to build the server yourself, use the official Telegram Bot API source repository:
 
 https://github.com/tdlib/telegram-bot-api
-
-This repository does not modify the Telegram Bot API source code.
 
 ## Licensing
 
