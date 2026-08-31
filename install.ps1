@@ -183,6 +183,8 @@ $ActualHash
     # Extract
     # --------------------------------------------------------
 
+    $ExtractDir = Join-Path $TempDir "extracted"
+
     $SourceDir = Get-ChildItem `
         -Path $ExtractDir `
         -Directory `
