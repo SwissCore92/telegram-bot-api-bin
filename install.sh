@@ -97,11 +97,15 @@ trap cleanup EXIT
 
 RELEASE_JSON="$TMP_DIR/release.json"
 
-curl -fsSL \
+if ! curl -fsSL \
+    --retry 5 \
+    --retry-delay 2 \
+    --retry-max-time 30 \
     -H "Accept: application/vnd.github+json" \
     "$API_URL" \
-    -o "$RELEASE_JSON" ||
+    -o "$RELEASE_JSON"; then
     die "Unable to fetch the latest release."
+fi
 
 TAG="$(python3 - "$RELEASE_JSON" <<'PY'
 import json
@@ -127,6 +131,9 @@ info "Latest release: $TAG"
 info "Downloading $ARCHIVE..."
 
 curl -fL \
+    --retry 5 \
+    --retry-delay 2 \
+    --retry-max-time 60 \
     "$DOWNLOAD_URL" \
     -o "$TMP_DIR/$ARCHIVE" ||
     die "Unable to download $ARCHIVE."
@@ -134,6 +141,9 @@ curl -fL \
 info "Downloading checksums..."
 
 curl -fL \
+    --retry 5 \
+    --retry-delay 2 \
+    --retry-max-time 60 \
     "$CHECKSUM_URL" \
     -o "$TMP_DIR/SHA256SUMS.txt" ||
     die "Unable to download SHA256SUMS.txt."
