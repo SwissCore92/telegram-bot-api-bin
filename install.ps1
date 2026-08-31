@@ -185,6 +185,22 @@ $ActualHash
 
     $ExtractDir = Join-Path $TempDir "extracted"
 
+    Info "Extracting..."
+
+    New-Item `
+        -ItemType Directory `
+        -Path $ExtractDir `
+        -Force | Out-Null
+
+    Expand-Archive `
+        -Path $ArchivePath `
+        -DestinationPath $ExtractDir `
+        -Force
+    
+    Get-ChildItem -Path $ExtractDir -Recurse | ForEach-Object {
+        Write-Host $_.FullName
+    }
+
     $SourceDir = Get-ChildItem `
         -Path $ExtractDir `
         -Directory `
