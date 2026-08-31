@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Repo = "SwissCore92/telegram-bot-api-binaries"
+$Repo = "SwissCore92/telegram-bot-api-bin"
 $BinaryName = "telegram-bot-api.exe"
 $InstallDir = Join-Path $env:LOCALAPPDATA "Telegram Bot API"
 

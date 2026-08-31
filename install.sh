@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="SwissCore92/telegram-bot-api-binaries"
+REPO="SwissCore92/telegram-bot-api-bin"
 INSTALL_DIR="/usr/local/bin"
 BINARY_NAME="telegram-bot-api"
 

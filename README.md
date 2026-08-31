@@ -1,7 +1,7 @@
 # Telegram Bot API - Prebuilt Binaries
 
-[![Telegram Bot API](https://img.shields.io/github/v/release/SwissCore92/telegram-bot-api-binaries?label=Telegram%20Bot%20API&logo=telegram&logoColor=white&style=for-the-badge)](https://github.com/SwissCore92/telegram-bot-api-binaries/releases/latest)
-[![Installer Tests](https://img.shields.io/github/actions/workflow/status/SwissCore92/telegram-bot-api-binaries/test-installer.yml?style=for-the-badge&label=Installer%20Tests&logo=githubactions&logoColor=white)](https://github.com/SwissCore92/telegram-bot-api-binaries/actions/workflows/test-installer.yml)
+[![Telegram Bot API](https://img.shields.io/github/v/release/SwissCore92/telegram-bot-api-bin?label=Telegram%20Bot%20API&logo=telegram&logoColor=white&style=for-the-badge)](https://github.com/SwissCore92/telegram-bot-api-bin/releases/latest)
+[![Installer Tests](https://img.shields.io/github/actions/workflow/status/SwissCore92/telegram-bot-api-bin/test-installer.yml?style=for-the-badge&label=Installer%20Tests&logo=githubactions&logoColor=white)](https://github.com/SwissCore92/telegram-bot-api-bin/actions/workflows/test-installer.yml)
 
 Unofficial prebuilt binaries of the **Telegram Bot API server**, compiled from the [official upstream](https://github.com/tdlib/telegram-bot-api) source code.
 
@@ -62,7 +62,7 @@ The installers automatically determine the latest GitHub Release and download th
 Run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-bin/main/install.sh | bash
 ```
 
 By default, the installer installs the `telegram-bot-api` executable to `/usr/local/bin`.
@@ -78,7 +78,7 @@ telegram-bot-api --version
 Open PowerShell and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-binaries/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/SwissCore92/telegram-bot-api-bin/main/install.ps1 | iex
 ```
 
 By default, the installer installs the `telegram-bot-api.exe` and its required `dll`s to `%LOCALAPPDATA%\Telegram Bot API`.
