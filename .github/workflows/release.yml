@@ -368,7 +368,8 @@ jobs:
           cmake `
             -S . `
             -B build `
-            -A x64 `
+            -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DCMAKE_INSTALL_PREFIX="$PWD/install"
 
@@ -376,10 +377,11 @@ jobs:
         shell: pwsh
         working-directory: telegram-bot-api
         run: |
+          Write-Host "CPUs: $env:NUMBER_OF_PROCESSORS"
+
           cmake `
             --build build `
-            --config Release `
-            --parallel
+            --parallel $env:NUMBER_OF_PROCESSORS
 
       - name: Install
         shell: pwsh
