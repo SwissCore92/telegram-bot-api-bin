@@ -2,194 +2,171 @@ $ErrorActionPreference = "Stop"
 
 $Repo = "SwissCore92/telegram-bot-api-binaries"
 $BinaryName = "telegram-bot-api.exe"
-
 $InstallDir = Join-Path $env:LOCALAPPDATA "Telegram Bot API"
 
 function Info($Message) {
-Write-Host "==> $Message"
+    Write-Host "==> $Message"
 }
 
 function Fail($Message) {
-Write-Error $Message
-exit 1
+    Write-Error $Message
+    exit 1
 }
 
 function Show-Help {
-Write-Host @"
+    Write-Host @"
 Usage: install.ps1 [--install-dir PATH]
 
 Options:
---install-dir PATH   Install the binary into PATH.
-Default: $InstallDir
---help, -h           Show this help message.
+  --install-dir PATH   Install the binary into PATH.
+                       Default: $InstallDir
+  --help, -h           Show this help message.
 "@
 }
 
 # ------------------------------------------------------------
-
 # Parse arguments
-
 # ------------------------------------------------------------
 
 for ($i = 0; $i -lt $args.Count; $i++) {
-switch ($args[$i]) {
-"--install-dir" {
-if ($i + 1 -ge $args.Count) {
-Fail "--install-dir requires a path."
-}
+    switch ($args[$i]) {
+        "--install-dir" {
+            if ($i + 1 -ge $args.Count) {
+                Fail "--install-dir requires a path."
+            }
 
+            $i++
+            $InstallDir = $args[$i]
 
-        $i++
-        $InstallDir = $args[$i]
+            if ([string]::IsNullOrWhiteSpace($InstallDir)) {
+                Fail "--install-dir requires a non-empty path."
+            }
+        }
 
-        if ([string]::IsNullOrWhiteSpace($InstallDir)) {
-            Fail "--install-dir requires a non-empty path."
+        "--help" {
+            Show-Help
+            exit 0
+        }
+
+        "-h" {
+            Show-Help
+            exit 0
+        }
+
+        default {
+            Fail "Unknown option: $($args[$i]). Use --help for usage information."
         }
     }
-
-    "--help" {
-        Show-Help
-        exit 0
-    }
-
-    "-h" {
-        Show-Help
-        exit 0
-    }
-
-    default {
-        Fail "Unknown option: $($args[$i]). Use --help for usage information."
-    }
-}
-
-
 }
 
 # ------------------------------------------------------------
-
 # Detect architecture
-
 # ------------------------------------------------------------
 
 switch ($env:PROCESSOR_ARCHITECTURE) {
-"AMD64" {
-$Platform = "windows-amd64"
-}
+    "AMD64" {
+        $Platform = "windows-amd64"
+    }
 
-
-default {
-    Fail "Unsupported Windows architecture: $env:PROCESSOR_ARCHITECTURE"
-}
-
-
+    default {
+        Fail "Unsupported Windows architecture: $env:PROCESSOR_ARCHITECTURE"
+    }
 }
 
 Info "Detected platform: $Platform"
 
-$TempDir = Join-Path `    $env:TEMP`
-("telegram-bot-api-" + [guid]::NewGuid())
+$TempDir = Join-Path $env:TEMP ("telegram-bot-api-" + [guid]::NewGuid())
 
-New-Item `    -ItemType Directory`
--Path $TempDir `
--Force | Out-Null
+New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
 
 try {
 
+    # --------------------------------------------------------
+    # Get latest release
+    # --------------------------------------------------------
 
-# --------------------------------------------------------
-# Get latest release
-# --------------------------------------------------------
+    $ApiUrl = "https://api.github.com/repos/$Repo/releases/latest"
 
-$ApiUrl =
-    "https://api.github.com/repos/$Repo/releases/latest"
+    $Headers = @{
+        "Accept" = "application/vnd.github+json"
+    }
 
-$Headers = @{
-    "Accept" = "application/vnd.github+json"
-}
+    Info "Fetching latest release..."
 
-Info "Fetching latest release..."
+    $Release = Invoke-RestMethod `
+        -Uri $ApiUrl `
+        -Headers $Headers
 
-$Release = Invoke-RestMethod `
-    -Uri $ApiUrl `
-    -Headers $Headers
+    $Tag = $Release.tag_name
 
-$Tag = $Release.tag_name
+    if ([string]::IsNullOrWhiteSpace($Tag)) {
+        Fail "No release tag was returned by GitHub."
+    }
 
-if ([string]::IsNullOrWhiteSpace($Tag)) {
-    Fail "No release tag was returned by GitHub."
-}
+    $Archive = "telegram-bot-api-$Tag-$Platform.zip"
 
-$Archive =
-    "telegram-bot-api-$Tag-$Platform.zip"
+    Info "Latest release: $Tag"
+    Info "Downloading $Archive..."
 
-Info "Latest release: $Tag"
-Info "Downloading $Archive..."
+    # --------------------------------------------------------
+    # Download binary
+    # --------------------------------------------------------
 
-# --------------------------------------------------------
-# Download binary
-# --------------------------------------------------------
+    $DownloadUrl = "https://github.com/$Repo/releases/download/$Tag/$Archive"
+    $ArchivePath = Join-Path $TempDir $Archive
 
-$DownloadUrl =
-    "https://github.com/$Repo/releases/download/$Tag/$Archive"
+    Invoke-WebRequest `
+        -Uri $DownloadUrl `
+        -OutFile $ArchivePath
 
-$ArchivePath =
-    Join-Path $TempDir $Archive
+    # --------------------------------------------------------
+    # Download checksums
+    # --------------------------------------------------------
 
-Invoke-WebRequest `
-    -Uri $DownloadUrl `
-    -OutFile $ArchivePath
+    $ChecksumUrl = "https://github.com/$Repo/releases/download/$Tag/SHA256SUMS.txt"
+    $ChecksumPath = Join-Path $TempDir "SHA256SUMS.txt"
 
-# --------------------------------------------------------
-# Download checksums
-# --------------------------------------------------------
+    Info "Downloading checksums..."
 
-$ChecksumUrl =
-    "https://github.com/$Repo/releases/download/$Tag/SHA256SUMS.txt"
+    Invoke-WebRequest `
+        -Uri $ChecksumUrl `
+        -OutFile $ChecksumPath
 
-$ChecksumPath =
-    Join-Path $TempDir "SHA256SUMS.txt"
+    # --------------------------------------------------------
+    # Verify SHA-256
+    # --------------------------------------------------------
 
-Info "Downloading checksums..."
+    Info "Verifying SHA-256 checksum..."
 
-Invoke-WebRequest `
-    -Uri $ChecksumUrl `
-    -OutFile $ChecksumPath
+    $ExpectedHash = $null
 
-# --------------------------------------------------------
-# Verify SHA-256
-# --------------------------------------------------------
+    foreach ($Line in Get-Content $ChecksumPath) {
+        if ($Line -match "^\s*([a-fA-F0-9]{64})\s+(.+)$") {
+            $ChecksumFile = $Matches[2].Trim()
 
-Info "Verifying SHA-256 checksum..."
-
-$ExpectedHash = $null
-
-foreach ($Line in Get-Content $ChecksumPath) {
-    if ($Line -match "^\s*([a-fA-F0-9]{64})\s+(.+)$") {
-        $ChecksumFile = $Matches[2].Trim()
-
-        if ($ChecksumFile -eq $Archive -or
-            $ChecksumFile -eq "dist/$Archive" -or
-            $ChecksumFile -eq "*$Archive") {
-            $ExpectedHash = $Matches[1]
-            break
+            if (
+                $ChecksumFile -eq $Archive -or
+                $ChecksumFile -eq "dist/$Archive" -or
+                $ChecksumFile -eq "*$Archive"
+            ) {
+                $ExpectedHash = $Matches[1]
+                break
+            }
         }
     }
-}
 
-if ([string]::IsNullOrWhiteSpace($ExpectedHash)) {
-    Fail "No checksum found for $Archive."
-}
+    if ([string]::IsNullOrWhiteSpace($ExpectedHash)) {
+        Fail "No checksum found for $Archive."
+    }
 
-$ActualHash = (
-    Get-FileHash `
-        -Path $ArchivePath `
-        -Algorithm SHA256
-).Hash
+    $ActualHash = (
+        Get-FileHash `
+            -Path $ArchivePath `
+            -Algorithm SHA256
+    ).Hash
 
-if ($ExpectedHash.ToLower() -ne $ActualHash.ToLower()) {
-    Fail @"
-
-
+    if ($ExpectedHash.ToLower() -ne $ActualHash.ToLower()) {
+        Fail @"
 SHA-256 checksum verification failed.
 
 Expected:
@@ -198,114 +175,105 @@ $ExpectedHash
 Actual:
 $ActualHash
 "@
-}
+    }
 
+    Info "Checksum verified."
 
-Info "Checksum verified."
+    # --------------------------------------------------------
+    # Extract
+    # --------------------------------------------------------
 
-# --------------------------------------------------------
-# Extract
-# --------------------------------------------------------
+    $ExtractDir = Join-Path $TempDir "extracted"
 
-$ExtractDir =
-    Join-Path $TempDir "extracted"
+    Info "Extracting..."
 
-Info "Extracting..."
+    Expand-Archive `
+        -Path $ArchivePath `
+        -DestinationPath $ExtractDir `
+        -Force
 
-Expand-Archive `
-    -Path $ArchivePath `
-    -DestinationPath $ExtractDir `
-    -Force
-
-$SourceDir =
-    Join-Path `
+    $SourceDir = Join-Path `
         $ExtractDir `
         "telegram-bot-api-$Tag-$Platform"
 
-$BinaryPath =
-    Join-Path $SourceDir $BinaryName
+    $BinaryPath = Join-Path $SourceDir $BinaryName
 
-if (-not (Test-Path $BinaryPath)) {
-    Fail "Binary was not found in the downloaded archive."
-}
+    if (-not (Test-Path $BinaryPath)) {
+        Fail "Binary was not found in the downloaded archive."
+    }
 
-# --------------------------------------------------------
-# Install
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Install
+    # --------------------------------------------------------
 
-Info "Installing to $InstallDir..."
+    Info "Installing to $InstallDir..."
 
-New-Item `
-    -ItemType Directory `
-    -Path $InstallDir `
-    -Force | Out-Null
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 
-$Destination =
-    Join-Path $InstallDir $BinaryName
+    $Destination = Join-Path $InstallDir $BinaryName
 
-Copy-Item `
-    -Path $BinaryPath `
-    -Destination $Destination `
-    -Force
+    Copy-Item `
+        -Path $BinaryPath `
+        -Destination $Destination `
+        -Force
 
-# --------------------------------------------------------
-# Add installation directory to user PATH
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Add installation directory to user PATH
+    # --------------------------------------------------------
 
-$UserPath =
-    [Environment]::GetEnvironmentVariable(
+    $UserPath = [Environment]::GetEnvironmentVariable(
         "Path",
         "User"
     )
 
-$PathEntries = @()
+    $PathEntries = @()
 
-if (-not [string]::IsNullOrWhiteSpace($UserPath)) {
-    $PathEntries = $UserPath -split ";"
-}
-
-if ($PathEntries -notcontains $InstallDir) {
-
-    $NewPath = if (
-        [string]::IsNullOrWhiteSpace($UserPath)
-    ) {
-        $InstallDir
-    }
-    else {
-        "$UserPath;$InstallDir"
+    if (-not [string]::IsNullOrWhiteSpace($UserPath)) {
+        $PathEntries = $UserPath -split ";"
     }
 
-    [Environment]::SetEnvironmentVariable(
-        "Path",
-        $NewPath,
-        "User"
-    )
+    if ($PathEntries -notcontains $InstallDir) {
+        $NewPath = if (
+            [string]::IsNullOrWhiteSpace($UserPath)
+        ) {
+            $InstallDir
+        }
+        else {
+            "$UserPath;$InstallDir"
+        }
 
-    Info "Added installation directory to user PATH."
-}
+        [Environment]::SetEnvironmentVariable(
+            "Path",
+            $NewPath,
+            "User"
+        )
 
-# --------------------------------------------------------
-# Done
-# --------------------------------------------------------
+        Info "Added installation directory to user PATH."
+    }
 
-Write-Host ""
-Info "Installation complete."
-Write-Host ""
-Write-Host "  Version:  $Tag"
-Write-Host "  Platform: $Platform"
-Write-Host "  Binary:   $Destination"
-Write-Host ""
-Write-Host "Open a new PowerShell window, then run:"
-Write-Host ""
-Write-Host "  telegram-bot-api.exe --help"
-Write-Host ""
+    # --------------------------------------------------------
+    # Done
+    # --------------------------------------------------------
 
+    Write-Host ""
+    Info "Installation complete."
+    Write-Host ""
+    Write-Host "  Version:  $Tag"
+    Write-Host "  Platform: $Platform"
+    Write-Host "  Binary:   $Destination"
+    Write-Host ""
+    Write-Host "Open a new PowerShell window, then run:"
+    Write-Host ""
+    Write-Host "  telegram-bot-api.exe --help"
+    Write-Host ""
 
 }
 finally {
-if (Test-Path $TempDir) {
-Remove-Item `            -Path $TempDir`
--Recurse `            -Force`
--ErrorAction SilentlyContinue
-}
+    if (Test-Path $TempDir) {
+        Remove-Item `
+            -Path $TempDir `
+            -Recurse `
+            -Force `
+            -ErrorAction SilentlyContinue
+    }
 }
