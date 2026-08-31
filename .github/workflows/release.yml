@@ -17,6 +17,7 @@ permissions:
 
 env:
   UPSTREAM_REPO: https://github.com/tdlib/telegram-bot-api.git
+  VCPKG_VERSION: "2026.07.29"
 
 jobs:
   resolve:
@@ -310,11 +311,40 @@ jobs:
       - name: Install vcpkg
         shell: pwsh
         run: |
-          git clone https://github.com/microsoft/vcpkg.git `
+          git clone `
+            --depth 1 `
+            --branch "$env:VCPKG_VERSION" `
+            https://github.com/microsoft/vcpkg.git `
             "$env:GITHUB_WORKSPACE\vcpkg"
 
           Set-Location "$env:GITHUB_WORKSPACE\vcpkg"
           .\bootstrap-vcpkg.bat
+      
+      - name: Install vcpkg
+        shell: pwsh
+        run: |
+          git clone `
+            --depth 1 `
+            --branch "$env:VCPKG_VERSION" `
+            https://github.com/microsoft/vcpkg.git `
+            "$env:GITHUB_WORKSPACE\vcpkg"
+
+          Set-Location "$env:GITHUB_WORKSPACE\vcpkg"
+          .\bootstrap-vcpkg.bat
+
+      - name: Cache vcpkg binaries
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}\vcpkg-cache
+          key: vcpkg-x64-windows-${{ env.VCPKG_VERSION }}-openssl-zlib-gperf
+
+      - name: Configure vcpkg binary cache
+        shell: pwsh
+        run: |
+          "VCPKG_DEFAULT_BINARY_CACHE=$env:GITHUB_WORKSPACE\vcpkg-cache" |
+            Out-File `
+              -FilePath $env:GITHUB_ENV `
+              -Append
 
       - name: Install dependencies
         shell: pwsh
