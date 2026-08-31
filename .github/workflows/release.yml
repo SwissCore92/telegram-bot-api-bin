@@ -351,6 +351,22 @@ jobs:
             gperf:x64-windows `
             openssl:x64-windows `
             zlib:x64-windows
+      
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+      
+      - name: Show sccache version
+        shell: pwsh
+        run: |
+          sccache --version
+        
+      - name: Configure sccache
+        shell: pwsh
+        run: |
+          "SCCACHE_GHA_ENABLED=true" |
+            Out-File `
+              -FilePath $env:GITHUB_ENV `
+              -Append
 
       - name: Record source revision
         shell: pwsh
@@ -371,6 +387,8 @@ jobs:
             -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="$env:GITHUB_WORKSPACE/vcpkg/scripts/buildsystems/vcpkg.cmake" `
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache `
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache `
             -DCMAKE_INSTALL_PREFIX="$PWD/install"
 
       - name: Build
@@ -379,9 +397,15 @@ jobs:
         run: |
           Write-Host "CPUs: $env:NUMBER_OF_PROCESSORS"
 
+          Write-Host "===== sccache statistics before build ====="
+          sccache --show-stats
+
           cmake `
             --build build `
             --parallel $env:NUMBER_OF_PROCESSORS
+
+          Write-Host "===== sccache statistics after build ====="
+          sccache --show-stats
 
       - name: Install
         shell: pwsh
