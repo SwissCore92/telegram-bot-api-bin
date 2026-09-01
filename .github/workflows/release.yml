@@ -125,6 +125,14 @@ jobs:
             gperf \
             libssl-dev \
             zlib1g-dev
+      
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+
+      - name: Configure sccache
+        shell: bash
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
 
       - name: Clone Telegram Bot API
         run: |
@@ -150,7 +158,10 @@ jobs:
             -S . \
             -B build \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DCMAKE_INSTALL_PREFIX="$PWD/install"
+
 
           cmake \
             --build build \
@@ -216,6 +227,14 @@ jobs:
             gperf \
             libssl-dev \
             zlib1g-dev
+      
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.11
+
+      - name: Configure sccache
+        shell: bash
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> "$GITHUB_ENV"
 
       - name: Clone Telegram Bot API
         run: |
@@ -241,6 +260,8 @@ jobs:
             -S . \
             -B build \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
             -DCMAKE_INSTALL_PREFIX="$PWD/install"
 
           cmake \
